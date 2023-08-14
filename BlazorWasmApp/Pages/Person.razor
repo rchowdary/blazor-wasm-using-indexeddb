@@ -1,0 +1,83 @@
+﻿@page "/person"
+@inject IBlazorDbFactory _dbFactory
+
+<h3>Persons with Indexeddb</h3>
+<button class="btn btn-primary" @onclick="AddPerson">Add Person</button>
+<button class="btn btn-primary" @onclick="RemovePerson">Remove Person</button>
+
+<table class="table">
+        <thead>
+            <tr>
+                <th>name</th>
+                <th>age</th>
+                <th>guid</th>
+                <th>id</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>@item.name</td>
+                    <td>@item.age</td>
+                    <td>@item.guid</td>
+                    <td>@item.id</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+@code {
+public class PersonModel
+{
+    public int id { get; set;}  
+    public string name { get; set;} 
+    public int age { get; set;} 
+    public Guid guid { get; set;} 
+}
+    string dbName="Test";
+    string storeName = "Person";
+    @* private List<PersonModel>? items = new List<PersonModel>(); *@
+   IList<PersonModel> items = new List<PersonModel>();
+    protected override async Task OnInitializedAsync()
+    {
+        await Get10Persons();
+    }
+
+    private async void AddPerson()
+    { 
+        var manager = await _dbFactory.GetDbManager(dbName);
+        await manager.AddRecord(new StoreRecord<object>()
+        {
+            StoreName = storeName,
+            Record = new { Name = "MyName", Age = 20 , Guid = System.Guid.NewGuid()}
+        });
+    }
+    private async void RemovePerson()
+    { 
+        var manager = await _dbFactory.GetDbManager(dbName);
+        await manager.DeleteRecord(storeName, 2);
+    }
+    protected async Task Get10Persons()
+    {
+        var manager = await _dbFactory.GetDbManager(dbName);
+        items = await manager.ToArray<PersonModel>(storeName);
+        foreach (var item in items.Take(10)) {
+            Console.WriteLine(item);
+        }
+        Console.WriteLine($"Got {items.Count()} items.");       
+    }
+    
+    private async void WhereNameAndId()
+    {
+        var manager = await _dbFactory.GetDbManager(dbName);
+        var filters = new List<IndexFilterValue>();
+        filters.Add(new IndexFilterValue("id", 1));
+        filters.Add(new IndexFilterValue("name", "MyName"));
+        var items = await manager.Where<object>(storeName, filters);
+        foreach (var item in items) {
+            Console.WriteLine(item);
+        }
+    }
+
+}
